@@ -143,6 +143,7 @@ resource "aws_ssm_parameter" "prod_account_number_ssm" {
 # Secrets Manager for Github Personal Access Token
 resource "aws_secretsmanager_secret" "github_pat" {
   name = "sagemaker/github_pat"
+  kms_key_id = module.kms.key_arn
 }
 
 resource "aws_secretsmanager_secret_version" "github_pat_version" {
