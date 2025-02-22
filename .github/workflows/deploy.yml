@@ -9,8 +9,8 @@
     workflow_dispatch:
   env: 
     AWS_ASSUME_ROLE_NAME: ${{ secrets.AWS_ASSUME_ROLE_NAME }}
-    S3_PREFIX: "mlops-terraform-state"
-    DYNAMODB_PREFIX: "mlops-terraform-state-locks"
+    S3_PREFIX: "terraform-state"
+    DYNAMODB_PREFIX: "terraform-state-locks"
     PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
   jobs:
     tf-apply-dev:
