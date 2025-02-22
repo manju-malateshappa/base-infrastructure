@@ -69,11 +69,11 @@ resource "aws_security_group" "main" {
   description = "Security group for Sagemaker"
   vpc_id      = aws_vpc.main.id
   egress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"] # Allow only within VPC
-    description = "Allow only HTTPS traffic within the VPC."
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Egress Self for ML instances to talk to each other."
   }
   ingress {
     protocol    = "-1"
