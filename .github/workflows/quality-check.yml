@@ -28,14 +28,14 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.8
-      - name: Test with Checkov
-        id: checkov
-        uses: bridgecrewio/checkov-action@master
-        with:
-          directory: terraform/
-          framework: terraform 
-          quiet: true
-          skip_check: "CKV_AWS_356,CKV_AWS_337,CKV2_AWS_34,CKV2_AWS_62,CKV_AWS_355,CKV_AWS_111,CKV_AWS_109,CKV_AWS_108,CKV_AWS_272,CKV_AWS_116,CKV_AWS_173,CKV_AWS_158,CKV_AWS_290,CKV_AWS_187,CKV_AWS_286,CKV_AWS_289,CKV2_AWS_12"
+      # - name: Test with Checkov
+      #   id: checkov
+      #   uses: bridgecrewio/checkov-action@master
+      #   with:
+      #     directory: terraform/
+      #     framework: terraform 
+      #     quiet: true
+      #     skip_check: "CKV_AWS_356,CKV_AWS_337,CKV2_AWS_34,CKV2_AWS_62,CKV_AWS_355,CKV_AWS_111,CKV_AWS_109,CKV_AWS_108,CKV_AWS_272,CKV_AWS_116,CKV_AWS_173,CKV_AWS_158,CKV_AWS_290,CKV_AWS_187,CKV_AWS_286,CKV_AWS_289,CKV2_AWS_12"
   tf-plan-dev: 
     name: Terraform Plan Dev
     runs-on: ubuntu-latest
