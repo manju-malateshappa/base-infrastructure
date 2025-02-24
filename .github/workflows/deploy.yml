@@ -1,13 +1,8 @@
 ---
   name: Deploy infrastructure
   on: 
-    push: 
-      branches: 
-        - main
-      paths: 
-        - terraform/**
     workflow_dispatch:
-  env: 
+  env:
     AWS_ASSUME_ROLE_NAME: ${{ secrets.AWS_ASSUME_ROLE_NAME }}
     S3_PREFIX: "terraform-state"
     DYNAMODB_PREFIX: "terraform-state-locks"
@@ -18,7 +13,7 @@
       runs-on: ubuntu-latest
       strategy:
         matrix:
-          business_unit: ["business_unit_1"] 
+          business_unit: ["business_unit_1"]  # Keeps business unit logic
       permissions: 
         actions: read
         contents: write
@@ -35,24 +30,37 @@
         - name: Set Environment Variables
           run: |
             echo "AWS_DEV_ACCOUNT_NUMBER=$(jq -r ".${{ matrix.business_unit }}.dev_account_number" config.json)" >> $GITHUB_ENV
-            echo "AWS_PREPROD_ACCOUNT_NUMBER=$(jq -r .${{ matrix.business_unit }}.preprod_account_number config.json)" >> $GITHUB_ENV
-            echo "AWS_PROD_ACCOUNT_NUMBER=$(jq -r ".${{ matrix.business_unit }}.prod_account_number" config.json)" >> $GITHUB_ENV
             echo "AWS_REGION=$(jq -r ".${{ matrix.business_unit }}.region" config.json)" >> $GITHUB_ENV
         - name: Assume Dev Role
           uses: aws-actions/configure-aws-credentials@v1
           with: 
             role-to-assume: arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:role/${{ env.AWS_ASSUME_ROLE_NAME }}
             aws-region: ${{ env.AWS_REGION }}
-        - name: Terraform Apply Dev
+        - name: Terraform Init
+          run: |
+            terraform init -backend-config="bucket=terraform-state-dev-${{ env.AWS_REGION }}-${{ env.AWS_DEV_ACCOUNT_NUMBER }}"
+        - name: Import Existing IAM Policies
+          run: |
+            terraform import aws_iam_policy.sagemaker_pass_role_policy arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:policy/sagemaker_pass_role_policy || true
+            terraform import aws_iam_policy.sagemaker_execution_policy arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:policy/sagemaker_execution_policy || true
+        - name: Import Existing Secrets
+          run: |
+            terraform import aws_secretsmanager_secret.github_pat sagemaker/github_pat || true
+        - name: Import Existing CloudWatch Log Groups
+          run: |
+            terraform import aws_cloudwatch_log_group.log_group /aws/lambda/mlops_clone_repo_lambda || true
+        - name: Import Existing S3 Buckets
+          run: |
+            terraform import aws_s3_bucket.bucket mlops-ds-us-east-1-${{ env.AWS_DEV_ACCOUNT_NUMBER }} || true
+        - name: Terraform Apply
           run: | 
             make tf-apply env=dev \
-            bucket=${{ env.S3_PREFIX }}-dev-${{ env.AWS_REGION }}-${{ env.AWS_DEV_ACCOUNT_NUMBER }} \
+            bucket=terraform-state-dev-${{ env.AWS_REGION }}-${{ env.AWS_DEV_ACCOUNT_NUMBER }} \
             region=${{ env.AWS_REGION }} \
             key=mlops-terraform-dev.state \
             table=${{ env.DYNAMODB_PREFIX }}-dev \
-            preprod=${{ env.AWS_PREPROD_ACCOUNT_NUMBER }} \
-            prod=${{ env.AWS_PROD_ACCOUNT_NUMBER }} \
             pat_github=${{ env.PAT_GITHUB }}
+  
 
     # tf-apply-preprod: 
     #   name: Terraform Apply PreProd
