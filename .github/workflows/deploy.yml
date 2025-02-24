@@ -36,22 +36,44 @@
           with: 
             role-to-assume: arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:role/${{ env.AWS_ASSUME_ROLE_NAME }}
             aws-region: ${{ env.AWS_REGION }}
+  
+        # ✅ Import Existing IAM Policies Before Creating
+        - name: Import Existing IAM Policies
+          run: |
+            terraform import aws_iam_policy.vpc-flow-logs-policy arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:policy/vpc-flow-logs-policy || true
+            terraform import aws_iam_policy.sm-deny-policy arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:policy/sm-deny-policy || true
+            terraform import aws_iam_policy.services-policy arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:policy/services-policy || true
+            terraform import aws_iam_policy.kms-policy arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:policy/kms-policy || true
+            terraform import aws_iam_policy.s3-policy arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:policy/s3-policy || true
+  
+        # ✅ Import Existing IAM Roles
+        - name: Import Existing IAM Roles
+          run: |
+            terraform import aws_iam_role.vpc-flow-logs-role arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:role/vpc-flow-logs-role || true
+  
+        # ✅ Import Existing CloudWatch Log Groups
+        - name: Import Existing CloudWatch Log Groups
+          run: |
+            terraform import aws_cloudwatch_log_group.log_group /aws/lambda/mlops_trigger_workflow_lambda || true
+            terraform import aws_cloudwatch_log_group.log_group /aws/vpc/main-flow-logs || true
+  
+        # ✅ Import Existing SSM Parameters & Enable Overwrite
+        - name: Import Existing SSM Parameters
+          run: |
+            terraform import aws_ssm_parameter.private_subnet_id private-subnets-ids || true
+            terraform import aws_ssm_parameter.sg_id sagemaker-domain-sg || true
+  
         - name: Terraform Init
           run: |
             terraform init -backend-config="bucket=terraform-state-dev-${{ env.AWS_REGION }}-${{ env.AWS_DEV_ACCOUNT_NUMBER }}"
-        - name: Import Existing IAM Policies
-          run: |
-            terraform import aws_iam_policy.sagemaker_pass_role_policy arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:policy/sagemaker_pass_role_policy || true
-            terraform import aws_iam_policy.sagemaker_execution_policy arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:policy/sagemaker_execution_policy || true
-        - name: Import Existing Secrets
-          run: |
-            terraform import aws_secretsmanager_secret.github_pat sagemaker/github_pat || true
-        - name: Import Existing CloudWatch Log Groups
-          run: |
-            terraform import aws_cloudwatch_log_group.log_group /aws/lambda/mlops_clone_repo_lambda || true
+  
+        # ✅ Import Existing S3 Buckets
         - name: Import Existing S3 Buckets
           run: |
             terraform import aws_s3_bucket.bucket mlops-ds-us-east-1-${{ env.AWS_DEV_ACCOUNT_NUMBER }} || true
+            terraform import aws_s3_bucket.bucket service-catalog-us-east-1-${{ env.AWS_DEV_ACCOUNT_NUMBER }} || true
+            terraform import aws_s3_bucket.bucket sagemaker-us-east-1-${{ env.AWS_DEV_ACCOUNT_NUMBER }} || true
+  
         - name: Terraform Apply
           run: | 
             make tf-apply env=dev \
@@ -60,6 +82,7 @@
             key=mlops-terraform-dev.state \
             table=${{ env.DYNAMODB_PREFIX }}-dev \
             pat_github=${{ env.PAT_GITHUB }}
+  
   
 
     # tf-apply-preprod: 
