@@ -11,12 +11,27 @@ terraform {
 # S3
 # Use external data source to check if buckets exist without failing
 data "external" "check_sagemaker_bucket" {
-  program = ["bash", "-c", "aws s3api head-bucket --bucket ${local.expected_sagemaker_bucket_name} 2>/dev/null && echo '{\"exists\": \"true\"}' || echo '{\"exists\": \"false\"}'"]
+  program = ["bash", "-c", <<EOT
+    if aws s3api head-bucket --bucket ${local.expected_sagemaker_bucket_name} 2>/dev/null; then
+      echo '{"exists": "true"}'
+    else
+      echo '{"exists": "false"}'
+    fi
+EOT
+  ]
 }
 
 data "external" "check_datascience_bucket" {
-  program = ["bash", "-c", "aws s3api head-bucket --bucket ${local.expected_datascience_bucket_name} 2>/dev/null && echo '{\"exists\": \"true\"}' || echo '{\"exists\": \"false\"}'"]
+  program = ["bash", "-c", <<EOT
+    if aws s3api head-bucket --bucket ${local.expected_datascience_bucket_name} 2>/dev/null; then
+      echo '{"exists": "true"}'
+    else
+      echo '{"exists": "false"}'
+    fi
+EOT
+  ]
 }
+
 
 # Module to create the S3 bucket only if it does NOT already exist
 module "sagemaker_bucket" {
