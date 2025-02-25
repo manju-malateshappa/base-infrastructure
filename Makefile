@@ -52,7 +52,8 @@ tf-destroy:
 	-var-file ../account_config/${env}/terraform.tfvars \
 	-auto-approve || \
 	(echo "Destroy failed, checking for locks..." && \
-	LOCK_ID=$$(terraform plan -lock=false 2>&1 | grep "ID:" | awk '{print $$2}') && \
+	terraform plan -lock=false > /tmp/tf_error.log 2>&1 || true && \
+	LOCK_ID=$$(grep -A 5 "Error: Error acquiring the state lock" /tmp/tf_error.log | grep "ID:" | sed 's/.*ID:[[:space:]]*\([^[:space:]]*\).*/\1/') && \
 	if [ ! -z "$$LOCK_ID" ]; then \
 		echo "Found lock with ID: $$LOCK_ID. Attempting to force-unlock..." && \
 		terraform force-unlock -force "$$LOCK_ID" && \
