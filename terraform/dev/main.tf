@@ -10,13 +10,6 @@ terraform {
 
 # S3
 # Try to get the buckets if they exist, but don't fail if they don't
-locals {
-  expected_sagemaker_bucket_name = "sagemaker-${local.aws_region}-${local.account_id}"
-  expected_datascience_bucket_name = "${var.s3_bucket_prefix}-ds-${local.aws_region}-${local.account_id}"
-  expected_service_catalog_bucket_name = "service-catalog-${local.aws_region}-${local.account_id}"
-}
-
-# Try to get the buckets if they exist
 resource "null_resource" "check_buckets" {
   provisioner "local-exec" {
     command = <<EOT
