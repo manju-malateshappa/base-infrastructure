@@ -19,10 +19,10 @@ resource "aws_ssm_parameter" "private_subnet_id" {
   name  = "private-subnets-ids"
   type  = "StringList"
   value = join(",", [aws_subnet.private.id, aws_subnet.private_2.id])
-    lifecycle {
-    ignore_changes = all
-    prevent_destroy = true
-  }
+  #   lifecycle {
+  #   ignore_changes = all
+  #   prevent_destroy = true
+  # }
 }
 
 # 4️⃣ Conditionally create SSM Parameter for Security Group ID (Only if it does NOT exist)

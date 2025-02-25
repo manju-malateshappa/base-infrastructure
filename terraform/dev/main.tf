@@ -15,10 +15,10 @@ resource "aws_s3_bucket" "sagemaker_bucket" {
   force_destroy = false
   
   # This will prevent errors if the bucket already exists
-  lifecycle {
-    ignore_changes = all
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   ignore_changes = all
+  #   prevent_destroy = true
+  # }
 }
 
 resource "aws_s3_bucket_versioning" "sagemaker_bucket_versioning" {
@@ -38,10 +38,10 @@ resource "aws_s3_bucket" "datascience_bucket" {
   force_destroy = false
   
   # This will prevent errors if the bucket already exists
-  lifecycle {
-    ignore_changes = all
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   ignore_changes = all
+  #   prevent_destroy = true
+  # }
 }
 
 resource "aws_s3_bucket_versioning" "datascience_bucket_versioning" {

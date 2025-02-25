@@ -78,10 +78,10 @@ resource "aws_ssm_parameter" "arn_sagemaker_pass_role_policy" {
   name      = "arn_sagemaker_pass_role_policy"
   type      = "String"
   value     = aws_iam_policy.sagemaker_pass_role_policy.arn
-    lifecycle {
-    ignore_changes = all
-    prevent_destroy = true
-  }
+  #   lifecycle {
+  #   ignore_changes = all
+  #   prevent_destroy = true
+  # }
 }
 
 resource "aws_ssm_parameter" "arn_sagemaker_execution_policy" {
@@ -132,10 +132,10 @@ resource "aws_secretsmanager_secret" "github_pat" {
   kms_key_id = module.kms.key_arn
 
   # Ignore changes to prevent recreation if secret already exists
-  lifecycle {
-    ignore_changes = all
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   ignore_changes = all
+  #   prevent_destroy = true
+  # }
 }
 
 resource "aws_secretsmanager_secret_version" "github_pat_version" {
@@ -143,9 +143,9 @@ resource "aws_secretsmanager_secret_version" "github_pat_version" {
   secret_string = jsonencode({ "github_pat" : var.pat_github })
 
   # Ignore changes to prevent Terraform from overwriting existing secret values
-  lifecycle {
-    ignore_changes = all
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   ignore_changes = all
+  #   prevent_destroy = true
+  # }
 }
 
