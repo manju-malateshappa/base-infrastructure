@@ -16,7 +16,7 @@ resource "aws_s3_bucket" "sagemaker_bucket" {
   
   # This will prevent errors if the bucket already exists
   lifecycle {
-    ignore_changes = [bucket]
+    ignore_changes = all
     prevent_destroy = true
   }
 }
@@ -39,7 +39,7 @@ resource "aws_s3_bucket" "datascience_bucket" {
   
   # This will prevent errors if the bucket already exists
   lifecycle {
-    ignore_changes = [bucket]
+    ignore_changes = all
     prevent_destroy = true
   }
 }

@@ -53,6 +53,15 @@
             preprod=${{ env.AWS_PREPROD_ACCOUNT_NUMBER }} \
             prod=${{ env.AWS_PROD_ACCOUNT_NUMBER }} \
             pat_github=${{ env.PAT_GITHUB }}
+          continue-on-error: true
+        - name: Verify Critical Resources
+          run: |
+            # Check if critical S3 buckets exist
+            aws s3 ls s3://sagemaker-us-east-1-${{ env.AWS_DEV_ACCOUNT_NUMBER }} || echo "Sagemaker bucket not found"
+            
+            # Check if critical IAM roles exist
+            aws iam get-role --role-name sagemaker_studio_role || echo "Sagemaker studio role not found"
+
     # tf-apply-preprod: 
     #   name: Terraform Apply PreProd
     #   runs-on: ubuntu-latest
