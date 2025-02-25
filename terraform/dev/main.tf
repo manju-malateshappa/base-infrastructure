@@ -10,8 +10,18 @@ terraform {
 
 # S3
 # Check if the SageMaker S3 bucket already exists
-data "aws_s3_bucket" "existing_sagemaker_bucket" {
-  bucket = "sagemaker-${local.aws_region}-${local.account_id}"
+locals {
+  expected_sagemaker_bucket_name = "sagemaker-${local.aws_region}-${local.account_id}"
+  expected_datascience_bucket_name = "${var.s3_bucket_prefix}-ds-${local.aws_region}-${local.account_id}"
+}
+
+# Use external data source to check if buckets exist without failing
+data "external" "check_sagemaker_bucket" {
+  program = ["bash", "-c", "aws s3api head-bucket --bucket ${local.expected_sagemaker_bucket_name} 2>/dev/null && echo '{\"exists\": \"true\"}' || echo '{\"exists\": \"false\"}'"]
+}
+
+data "external" "check_datascience_bucket" {
+  program = ["bash", "-c", "aws s3api head-bucket --bucket ${local.expected_datascience_bucket_name} 2>/dev/null && echo '{\"exists\": \"true\"}' || echo '{\"exists\": \"false\"}'"]
 }
 
 # Module to create the S3 bucket only if it does NOT already exist
@@ -19,24 +29,25 @@ module "sagemaker_bucket" {
   source                  = "../modules/s3"
 
   # Create bucket only if it doesn't exist
-  s3_bucket_name          = "sagemaker-${local.aws_region}-${local.account_id}"
+  s3_bucket_name          = local.expected_sagemaker_bucket_name
   s3_bucket_force_destroy = "false"
   versioning              = "Enabled"
   s3_bucket_policy        = data.aws_iam_policy_document.sagemaker_bucket_policy.json
 
   # Prevents Terraform from creating the bucket if it already exists
-  count = length(try(data.aws_s3_bucket.existing_sagemaker_bucket.id, "")) > 0 ? 0 : 1
+  count = data.external.check_sagemaker_bucket.result.exists == "true" ? 0 : 1
 }
-
-
 
 # Creates data science bucket with versioning enabled
 module "datascience_bucket" {
   source                  = "../modules/s3"
-  s3_bucket_name          = "${var.s3_bucket_prefix}-ds-${local.aws_region}-${local.account_id}"
+  s3_bucket_name          = local.expected_datascience_bucket_name
   s3_bucket_force_destroy = "false"
   versioning              = "Enabled"
   s3_bucket_policy        = data.aws_iam_policy_document.datascience_bucket_policy.json
+  
+  # Prevents Terraform from creating the bucket if it already exists
+  count = data.external.check_datascience_bucket.result.exists == "true" ? 0 : 1
 }
 
 # Creates service catalog bucket with versioning enabled
@@ -47,6 +58,8 @@ module "service_catalog_bucket" {
   versioning              = "Enabled"
   s3_bucket_policy        = data.aws_iam_policy_document.service_catalog_bucket_policy.json
 }
+
+
 
 # KMS
 module "kms" {

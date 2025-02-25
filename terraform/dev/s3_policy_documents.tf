@@ -1,18 +1,9 @@
-locals {
-  sagemaker_bucket_arn = length(try(data.aws_s3_bucket.existing_sagemaker_bucket.id, "")) > 0 ? (
-    "arn:aws:s3:::${data.aws_s3_bucket.existing_sagemaker_bucket.id}/*"
-  ) : (
-    "arn:aws:s3:::${module.sagemaker_bucket[0].bucket_id}/*"
-  )
-}
+# s3_policy_documents.tf
 
-# Local variable for Data Science bucket ARN
+# Define locals for expected bucket names based on your naming convention
 locals {
-  datascience_bucket_arn = length(try(data.aws_s3_bucket.existing_datascience_bucket.id, "")) > 0 ? (
-    "arn:aws:s3:::${data.aws_s3_bucket.existing_datascience_bucket.id}/*"
-  ) : (
-    "arn:aws:s3:::${module.datascience_bucket[0].bucket_id}/*"
-  )
+  expected_sagemaker_bucket_name = "sagemaker-${local.aws_region}-${local.account_id}"
+  expected_datascience_bucket_name = "${var.s3_bucket_prefix}-ds-${local.aws_region}-${local.account_id}"
 }
 
 # ✅ Creates policy document for SageMaker bucket
@@ -20,7 +11,7 @@ data "aws_iam_policy_document" "sagemaker_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-    resources = [local.sagemaker_bucket_arn]
+    resources = ["arn:aws:s3:::${local.expected_sagemaker_bucket_name}/*"]
     actions   = ["s3:*"]
 
     condition {
@@ -41,7 +32,7 @@ data "aws_iam_policy_document" "datascience_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-    resources = [local.datascience_bucket_arn]
+    resources = ["arn:aws:s3:::${local.expected_datascience_bucket_name}/*"]
     actions   = ["s3:*"]
 
     condition {
@@ -56,16 +47,13 @@ data "aws_iam_policy_document" "datascience_bucket_policy" {
     }
   }
 }
-
-
-
 
 # Creates policy document for service catalog bucket
 data "aws_iam_policy_document" "service_catalog_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-    resources = ["arn:aws:s3:::${module.service_catalog_bucket.bucket_id}/*"]
+    resources = ["arn:aws:s3:::service-catalog-${local.aws_region}-${local.account_id}/*"]
     actions   = ["s3:*"]
     condition {
       test     = "Bool"
@@ -80,10 +68,8 @@ data "aws_iam_policy_document" "service_catalog_bucket_policy" {
   }
 }
 
-
 # Creates policy document for kms key
 data "aws_iam_policy_document" "sagemaker_key_policy" {
-
   statement {
     sid       = "Allow access for Key Administrators"
     effect    = "Allow"
