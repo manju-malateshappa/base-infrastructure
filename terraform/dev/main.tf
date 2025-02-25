@@ -8,61 +8,52 @@ terraform {
   }
 }
 
-# S3
-# Try to get the buckets if they exist, but don't fail if they don't
-resource "null_resource" "check_buckets" {
-  provisioner "local-exec" {
-    command = <<EOT
-      # Check if SageMaker bucket exists
-      if aws s3api head-bucket --bucket ${local.expected_sagemaker_bucket_name} 2>/dev/null; then
-        echo "true" > ${path.module}/sagemaker_bucket_exists.txt
-      else
-        echo "false" > ${path.module}/sagemaker_bucket_exists.txt
-      fi
-      
-      # Check if DataScience bucket exists
-      if aws s3api head-bucket --bucket ${local.expected_datascience_bucket_name} 2>/dev/null; then
-        echo "true" > ${path.module}/datascience_bucket_exists.txt
-      else
-        echo "false" > ${path.module}/datascience_bucket_exists.txt
-      fi
-    EOT
+# S3 Buckets
+# Create the buckets directly with AWS provider resources
+resource "aws_s3_bucket" "sagemaker_bucket" {
+  bucket = local.expected_sagemaker_bucket_name
+  force_destroy = false
+  
+  # This will prevent errors if the bucket already exists
+  lifecycle {
+    ignore_changes = [bucket]
+    prevent_destroy = true
   }
 }
 
-# Read the files created by the null_resource
-data "local_file" "sagemaker_bucket_exists" {
-  depends_on = [null_resource.check_buckets]
-  filename = "${path.module}/sagemaker_bucket_exists.txt"
+resource "aws_s3_bucket_versioning" "sagemaker_bucket_versioning" {
+  bucket = aws_s3_bucket.sagemaker_bucket.id
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
-data "local_file" "datascience_bucket_exists" {
-  depends_on = [null_resource.check_buckets]
-  filename = "${path.module}/datascience_bucket_exists.txt"
+resource "aws_s3_bucket_policy" "sagemaker_bucket_policy" {
+  bucket = aws_s3_bucket.sagemaker_bucket.id
+  policy = data.aws_iam_policy_document.sagemaker_bucket_policy.json
 }
 
-# Module to create the S3 bucket only if it does NOT already exist
-module "sagemaker_bucket" {
-  source                  = "../modules/s3"
-  s3_bucket_name          = local.expected_sagemaker_bucket_name
-  s3_bucket_force_destroy = "false"
-  versioning              = "Enabled"
-  s3_bucket_policy        = data.aws_iam_policy_document.sagemaker_bucket_policy.json
+resource "aws_s3_bucket" "datascience_bucket" {
+  bucket = local.expected_datascience_bucket_name
+  force_destroy = false
   
-  # Prevents Terraform from creating the bucket if it already exists
-  count = trimspace(data.local_file.sagemaker_bucket_exists.content) == "true" ? 0 : 1
+  # This will prevent errors if the bucket already exists
+  lifecycle {
+    ignore_changes = [bucket]
+    prevent_destroy = true
+  }
 }
 
-# Creates data science bucket with versioning enabled
-module "datascience_bucket" {
-  source                  = "../modules/s3"
-  s3_bucket_name          = local.expected_datascience_bucket_name
-  s3_bucket_force_destroy = "false"
-  versioning              = "Enabled"
-  s3_bucket_policy        = data.aws_iam_policy_document.datascience_bucket_policy.json
-  
-  # Prevents Terraform from creating the bucket if it already exists
-  count = trimspace(data.local_file.datascience_bucket_exists.content) == "true" ? 0 : 1
+resource "aws_s3_bucket_versioning" "datascience_bucket_versioning" {
+  bucket = aws_s3_bucket.datascience_bucket.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_policy" "datascience_bucket_policy" {
+  bucket = aws_s3_bucket.datascience_bucket.id
+  policy = data.aws_iam_policy_document.datascience_bucket_policy.json
 }
 
 
