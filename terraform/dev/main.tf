@@ -9,42 +9,55 @@ terraform {
 }
 
 # S3
-# Use external data source to check if buckets exist without failing
-data "external" "check_sagemaker_bucket" {
-  program = ["bash", "-c", <<EOT
-    if aws s3api head-bucket --bucket ${local.expected_sagemaker_bucket_name} 2>/dev/null; then
-      echo '{ "exists": "true" }'
-    else
-      echo '{ "exists": "false" }'
-    fi
-EOT
-  ]
+# Try to get the buckets if they exist, but don't fail if they don't
+locals {
+  expected_sagemaker_bucket_name = "sagemaker-${local.aws_region}-${local.account_id}"
+  expected_datascience_bucket_name = "${var.s3_bucket_prefix}-ds-${local.aws_region}-${local.account_id}"
+  expected_service_catalog_bucket_name = "service-catalog-${local.aws_region}-${local.account_id}"
 }
 
-data "external" "check_datascience_bucket" {
-  program = ["bash", "-c", <<EOT
-    if aws s3api head-bucket --bucket ${local.expected_datascience_bucket_name} 2>/dev/null; then
-      echo '{ "exists": "true" }'
-    else
-      echo '{ "exists": "false" }'
-    fi
-EOT
-  ]
+# Try to get the buckets if they exist
+resource "null_resource" "check_buckets" {
+  provisioner "local-exec" {
+    command = <<EOT
+      # Check if SageMaker bucket exists
+      if aws s3api head-bucket --bucket ${local.expected_sagemaker_bucket_name} 2>/dev/null; then
+        echo "true" > ${path.module}/sagemaker_bucket_exists.txt
+      else
+        echo "false" > ${path.module}/sagemaker_bucket_exists.txt
+      fi
+      
+      # Check if DataScience bucket exists
+      if aws s3api head-bucket --bucket ${local.expected_datascience_bucket_name} 2>/dev/null; then
+        echo "true" > ${path.module}/datascience_bucket_exists.txt
+      else
+        echo "false" > ${path.module}/datascience_bucket_exists.txt
+      fi
+    EOT
+  }
 }
 
+# Read the files created by the null_resource
+data "local_file" "sagemaker_bucket_exists" {
+  depends_on = [null_resource.check_buckets]
+  filename = "${path.module}/sagemaker_bucket_exists.txt"
+}
+
+data "local_file" "datascience_bucket_exists" {
+  depends_on = [null_resource.check_buckets]
+  filename = "${path.module}/datascience_bucket_exists.txt"
+}
 
 # Module to create the S3 bucket only if it does NOT already exist
 module "sagemaker_bucket" {
   source                  = "../modules/s3"
-
-  # Create bucket only if it doesn't exist
   s3_bucket_name          = local.expected_sagemaker_bucket_name
   s3_bucket_force_destroy = "false"
   versioning              = "Enabled"
   s3_bucket_policy        = data.aws_iam_policy_document.sagemaker_bucket_policy.json
-
+  
   # Prevents Terraform from creating the bucket if it already exists
-  count = data.external.check_sagemaker_bucket.result.exists == "true" ? 0 : 1
+  count = trimspace(data.local_file.sagemaker_bucket_exists.content) == "true" ? 0 : 1
 }
 
 # Creates data science bucket with versioning enabled
@@ -56,8 +69,9 @@ module "datascience_bucket" {
   s3_bucket_policy        = data.aws_iam_policy_document.datascience_bucket_policy.json
   
   # Prevents Terraform from creating the bucket if it already exists
-  count = data.external.check_datascience_bucket.result.exists == "true" ? 0 : 1
+  count = trimspace(data.local_file.datascience_bucket_exists.content) == "true" ? 0 : 1
 }
+
 
 # Creates service catalog bucket with versioning enabled
 module "service_catalog_bucket" {
