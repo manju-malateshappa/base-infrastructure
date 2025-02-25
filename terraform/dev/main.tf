@@ -9,12 +9,6 @@ terraform {
 }
 
 # S3
-# Check if the SageMaker S3 bucket already exists
-locals {
-  expected_sagemaker_bucket_name = "sagemaker-${local.aws_region}-${local.account_id}"
-  expected_datascience_bucket_name = "${var.s3_bucket_prefix}-ds-${local.aws_region}-${local.account_id}"
-}
-
 # Use external data source to check if buckets exist without failing
 data "external" "check_sagemaker_bucket" {
   program = ["bash", "-c", "aws s3api head-bucket --bucket ${local.expected_sagemaker_bucket_name} 2>/dev/null && echo '{\"exists\": \"true\"}' || echo '{\"exists\": \"false\"}'"]
@@ -53,13 +47,11 @@ module "datascience_bucket" {
 # Creates service catalog bucket with versioning enabled
 module "service_catalog_bucket" {
   source                  = "../modules/s3"
-  s3_bucket_name          = "service-catalog-${local.aws_region}-${local.account_id}"
+  s3_bucket_name          = local.expected_service_catalog_bucket_name
   s3_bucket_force_destroy = "false"
   versioning              = "Enabled"
   s3_bucket_policy        = data.aws_iam_policy_document.service_catalog_bucket_policy.json
 }
-
-
 
 # KMS
 module "kms" {

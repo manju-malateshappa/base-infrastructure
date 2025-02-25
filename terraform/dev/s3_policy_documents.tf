@@ -1,11 +1,3 @@
-# s3_policy_documents.tf
-
-# Define locals for expected bucket names based on your naming convention
-locals {
-  expected_sagemaker_bucket_name = "sagemaker-${local.aws_region}-${local.account_id}"
-  expected_datascience_bucket_name = "${var.s3_bucket_prefix}-ds-${local.aws_region}-${local.account_id}"
-}
-
 # ✅ Creates policy document for SageMaker bucket
 data "aws_iam_policy_document" "sagemaker_bucket_policy" {
   statement {
@@ -53,7 +45,7 @@ data "aws_iam_policy_document" "service_catalog_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-    resources = ["arn:aws:s3:::service-catalog-${local.aws_region}-${local.account_id}/*"]
+    resources = ["arn:aws:s3:::${local.expected_service_catalog_bucket_name}/*"]
     actions   = ["s3:*"]
     condition {
       test     = "Bool"
