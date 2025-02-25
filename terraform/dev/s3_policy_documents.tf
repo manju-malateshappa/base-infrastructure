@@ -3,7 +3,7 @@ data "aws_iam_policy_document" "sagemaker_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-    resources = ["arn:aws:s3:::${module.sagemaker_bucket.bucket_id}/*"]
+    resources = ["arn:aws:s3:::${module.sagemaker_bucket[0].bucket_id}/*"]
     actions   = ["s3:*"]
 
     condition {
