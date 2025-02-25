@@ -44,11 +44,28 @@ tf-destroy:
 	-backend-config="dynamodb_table=${table}" \
 	-backend-config="encrypt=true" \
 	-reconfigure && \
-	terraform destroy \
+	(terraform destroy \
 	-var preprod_account_number=${preprod} \
 	-var prod_account_number=${prod} \
 	-var region=${region} \
 	-var pat_github=${pat_github} \
 	-var-file ../account_config/${env}/terraform.tfvars \
-	-auto-approve
+	-auto-approve || \
+	(echo "Destroy failed, checking for locks..." && \
+	LOCK_ID=$$(terraform plan -lock=false 2>&1 | grep "ID:" | awk '{print $$2}') && \
+	if [ ! -z "$$LOCK_ID" ]; then \
+		echo "Found lock with ID: $$LOCK_ID. Attempting to force-unlock..." && \
+		terraform force-unlock -force "$$LOCK_ID" && \
+		echo "Lock removed. Retrying destroy..." && \
+		terraform destroy \
+		-var preprod_account_number=${preprod} \
+		-var prod_account_number=${prod} \
+		-var region=${region} \
+		-var pat_github=${pat_github} \
+		-var-file ../account_config/${env}/terraform.tfvars \
+		-auto-approve; \
+	else \
+		echo "Failed but couldn't identify lock ID"; \
+		exit 1; \
+	fi))
 
