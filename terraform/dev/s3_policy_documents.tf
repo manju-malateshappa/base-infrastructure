@@ -1,15 +1,18 @@
-# Local variable for SageMaker bucket ARN
 locals {
-  sagemaker_bucket_arn = length(try(data.aws_s3_bucket.existing_sagemaker_bucket.id, "")) > 0
-    ? "arn:aws:s3:::${data.aws_s3_bucket.existing_sagemaker_bucket.id}/*"
-    : "arn:aws:s3:::${module.sagemaker_bucket[0].bucket_id}/*"
+  sagemaker_bucket_arn = length(try(data.aws_s3_bucket.existing_sagemaker_bucket.id, "")) > 0 ? (
+    "arn:aws:s3:::${data.aws_s3_bucket.existing_sagemaker_bucket.id}/*"
+  ) : (
+    "arn:aws:s3:::${module.sagemaker_bucket[0].bucket_id}/*"
+  )
 }
 
 # Local variable for Data Science bucket ARN
 locals {
-  datascience_bucket_arn = length(try(data.aws_s3_bucket.existing_datascience_bucket.id, "")) > 0
-    ? "arn:aws:s3:::${data.aws_s3_bucket.existing_datascience_bucket.id}/*"
-    : "arn:aws:s3:::${module.datascience_bucket[0].bucket_id}/*"
+  datascience_bucket_arn = length(try(data.aws_s3_bucket.existing_datascience_bucket.id, "")) > 0 ? (
+    "arn:aws:s3:::${data.aws_s3_bucket.existing_datascience_bucket.id}/*"
+  ) : (
+    "arn:aws:s3:::${module.datascience_bucket[0].bucket_id}/*"
+  )
 }
 
 # ✅ Creates policy document for SageMaker bucket
