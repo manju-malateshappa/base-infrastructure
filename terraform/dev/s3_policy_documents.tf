@@ -1,14 +1,23 @@
-# Creates policy document for SageMaker bucket
+# Local variable for SageMaker bucket ARN
+locals {
+  sagemaker_bucket_arn = length(try(data.aws_s3_bucket.existing_sagemaker_bucket.id, "")) > 0
+    ? "arn:aws:s3:::${data.aws_s3_bucket.existing_sagemaker_bucket.id}/*"
+    : "arn:aws:s3:::${module.sagemaker_bucket[0].bucket_id}/*"
+}
+
+# Local variable for Data Science bucket ARN
+locals {
+  datascience_bucket_arn = length(try(data.aws_s3_bucket.existing_datascience_bucket.id, "")) > 0
+    ? "arn:aws:s3:::${data.aws_s3_bucket.existing_datascience_bucket.id}/*"
+    : "arn:aws:s3:::${module.datascience_bucket[0].bucket_id}/*"
+}
+
+# ✅ Creates policy document for SageMaker bucket
 data "aws_iam_policy_document" "sagemaker_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-
-    # Dynamically determine which bucket ARN to use
-    resources = length(try(data.aws_s3_bucket.existing_sagemaker_bucket.id, "")) > 0 
-      ? ["arn:aws:s3:::${data.aws_s3_bucket.existing_sagemaker_bucket.id}/*"]
-      : ["arn:aws:s3:::${module.sagemaker_bucket[0].bucket_id}/*"]
-
+    resources = [local.sagemaker_bucket_arn]
     actions   = ["s3:*"]
 
     condition {
@@ -24,17 +33,12 @@ data "aws_iam_policy_document" "sagemaker_bucket_policy" {
   }
 }
 
-# Creates policy document for Data Science bucket
+# ✅ Creates policy document for Data Science bucket
 data "aws_iam_policy_document" "datascience_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-
-    # Dynamically determine which bucket ARN to use
-    resources = length(try(data.aws_s3_bucket.existing_datascience_bucket.id, "")) > 0 
-      ? ["arn:aws:s3:::${data.aws_s3_bucket.existing_datascience_bucket.id}/*"]
-      : ["arn:aws:s3:::${module.datascience_bucket[0].bucket_id}/*"]
-
+    resources = [local.datascience_bucket_arn]
     actions   = ["s3:*"]
 
     condition {
@@ -49,6 +53,8 @@ data "aws_iam_policy_document" "datascience_bucket_policy" {
     }
   }
 }
+
+
 
 
 # Creates policy document for service catalog bucket
