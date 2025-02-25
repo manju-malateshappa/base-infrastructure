@@ -1,12 +1,33 @@
+terraform {
+  backend "s3" {
+    bucket         = "terraform-state-${local.aws_region}-${local.account_id}"
+    key            = "mlops-terraform-dev.state"
+    region         = "${local.aws_region}"
+    dynamodb_table = "terraform-state-locks"
+    encrypt        = true
+  }
+}
+
 # S3
-# Creates SageMaker bucket with versioning enabled
+# Check if the SageMaker S3 bucket already exists
+data "aws_s3_bucket" "existing_sagemaker_bucket" {
+  bucket = "sagemaker-${local.aws_region}-${local.account_id}"
+}
+
+# Module to create the S3 bucket only if it does NOT already exist
 module "sagemaker_bucket" {
   source                  = "../modules/s3"
+
+  # Create bucket only if it doesn't exist
   s3_bucket_name          = "sagemaker-${local.aws_region}-${local.account_id}"
   s3_bucket_force_destroy = "false"
   versioning              = "Enabled"
   s3_bucket_policy        = data.aws_iam_policy_document.sagemaker_bucket_policy.json
+
+  # Prevents Terraform from creating the bucket if it already exists
+  count = length(try(data.aws_s3_bucket.existing_sagemaker_bucket.id, "")) > 0 ? 0 : 1
 }
+
 
 
 # Creates data science bucket with versioning enabled

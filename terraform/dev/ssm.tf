@@ -142,11 +142,22 @@ resource "aws_ssm_parameter" "prod_account_number_ssm" {
 
 # Secrets Manager for Github Personal Access Token
 resource "aws_secretsmanager_secret" "github_pat" {
-  name = "sagemaker/github_pat"
+  name       = "sagemaker/github_pat"
   kms_key_id = module.kms.key_arn
+
+  # Ignore changes to prevent recreation if secret already exists
+  lifecycle {
+    ignore_changes = [recovery_window_in_days]
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "github_pat_version" {
   secret_id     = aws_secretsmanager_secret.github_pat.id
-  secret_string = jsonencode({ "github_pat" : "${var.pat_github}" })
+  secret_string = jsonencode({ "github_pat" : var.pat_github })
+
+  # Ignore changes to prevent Terraform from overwriting existing secret values
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
+
