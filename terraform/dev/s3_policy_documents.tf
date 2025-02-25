@@ -1,9 +1,14 @@
-# Creates policy document for sagemaker bucket
+# Creates policy document for SageMaker bucket
 data "aws_iam_policy_document" "sagemaker_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-    resources = ["arn:aws:s3:::${module.sagemaker_bucket.bucket_id}/*"]
+
+    # Dynamically determine which bucket ARN to use
+    resources = length(try(data.aws_s3_bucket.existing_sagemaker_bucket.id, "")) > 0 
+      ? ["arn:aws:s3:::${data.aws_s3_bucket.existing_sagemaker_bucket.id}/*"]
+      : ["arn:aws:s3:::${module.sagemaker_bucket[0].bucket_id}/*"]
+
     actions   = ["s3:*"]
 
     condition {
@@ -19,14 +24,19 @@ data "aws_iam_policy_document" "sagemaker_bucket_policy" {
   }
 }
 
-
-# Creates policy document for datascience bucket
+# Creates policy document for Data Science bucket
 data "aws_iam_policy_document" "datascience_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-    resources = ["arn:aws:s3:::${module.datascience_bucket.bucket_id}/*"]
+
+    # Dynamically determine which bucket ARN to use
+    resources = length(try(data.aws_s3_bucket.existing_datascience_bucket.id, "")) > 0 
+      ? ["arn:aws:s3:::${data.aws_s3_bucket.existing_datascience_bucket.id}/*"]
+      : ["arn:aws:s3:::${module.datascience_bucket[0].bucket_id}/*"]
+
     actions   = ["s3:*"]
+
     condition {
       test     = "Bool"
       variable = "aws:SecureTransport"
