@@ -13,9 +13,9 @@ terraform {
 data "external" "check_sagemaker_bucket" {
   program = ["bash", "-c", <<EOT
     if aws s3api head-bucket --bucket ${local.expected_sagemaker_bucket_name} 2>/dev/null; then
-      echo '{"exists": "true"}'
+      echo '{ "exists": "true" }'
     else
-      echo '{"exists": "false"}'
+      echo '{ "exists": "false" }'
     fi
 EOT
   ]
@@ -24,9 +24,9 @@ EOT
 data "external" "check_datascience_bucket" {
   program = ["bash", "-c", <<EOT
     if aws s3api head-bucket --bucket ${local.expected_datascience_bucket_name} 2>/dev/null; then
-      echo '{"exists": "true"}'
+      echo '{ "exists": "true" }'
     else
-      echo '{"exists": "false"}'
+      echo '{ "exists": "false" }'
     fi
 EOT
   ]
