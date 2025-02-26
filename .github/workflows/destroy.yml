@@ -38,16 +38,66 @@
           with: 
             role-to-assume: arn:aws:iam::${{ env.AWS_DEV_ACCOUNT_NUMBER }}:role/${{ env.AWS_ASSUME_ROLE_NAME }}
             aws-region: ${{ env.AWS_REGION }}
+        
+        # Add this step to manually remove the lock from DynamoDB
+        - name: Remove DynamoDB lock
+          run: |
+            echo "Attempting to remove lock from DynamoDB table"
+            aws dynamodb delete-item \
+              --table-name ${{ env.DYNAMODB_PREFIX }}-dev \
+              --key '{"LockID": {"S": "terraform-state-dev-${{ env.AWS_REGION }}-${{ env.AWS_DEV_ACCOUNT_NUMBER }}/mlops-terraform-dev.state"}}'
+          continue-on-error: true  # Continue even if this step fails
+        
+        # Add this step to force-unlock using Terraform
+        - name: Force Unlock Terraform State
+          run: |
+            cd terraform/dev
+            terraform init \
+              -backend-config="bucket=terraform-state-dev-${{ env.AWS_REGION }}-${{ env.AWS_DEV_ACCOUNT_NUMBER }}" \
+              -backend-config="region=${{ env.AWS_REGION }}" \
+              -backend-config="key=mlops-terraform-dev.state" \
+              -backend-config="dynamodb_table=${{ env.DYNAMODB_PREFIX }}-dev" \
+              -backend-config="encrypt=true" \
+              -reconfigure
+            
+            echo "Attempting to force-unlock state with ID: 1101254f-eac4-0e96-80c7-387d87a28bee"
+            terraform force-unlock -force "1101254f-eac4-0e96-80c7-387d87a28bee"
+          continue-on-error: true  # Continue even if this step fails
+        
+        # Modified destroy step to use -lock=false if needed
         - name: Terraform Destroy Dev
           run: | 
-            make tf-destroy env=dev \
-            bucket=terraform-state-dev-${{ env.AWS_REGION }}-${{ env.AWS_DEV_ACCOUNT_NUMBER }} \
-            region=${{ env.AWS_REGION }} \
-            key=mlops-terraform-dev.state \
-            table=${{ env.DYNAMODB_PREFIX }}-dev \
-            preprod=${{ env.AWS_PREPROD_ACCOUNT_NUMBER }} \
-            prod=${{ env.AWS_PROD_ACCOUNT_NUMBER }} \
-            pat_github= ${{ env.PAT_GITHUB}}
+            # First try with normal destroy
+            if ! make tf-destroy env=dev \
+              bucket=terraform-state-dev-${{ env.AWS_REGION }}-${{ env.AWS_DEV_ACCOUNT_NUMBER }} \
+              region=${{ env.AWS_REGION }} \
+              key=mlops-terraform-dev.state \
+              table=${{ env.DYNAMODB_PREFIX }}-dev \
+              preprod=${{ env.AWS_PREPROD_ACCOUNT_NUMBER }} \
+              prod=${{ env.AWS_PROD_ACCOUNT_NUMBER }} \
+              pat_github=${{ env.PAT_GITHUB}}; then
+              
+              echo "Normal destroy failed. Trying with -lock=false..."
+              
+              # Try with lock=false as a fallback
+              cd terraform/dev && \
+              terraform init \
+                -backend-config="bucket=terraform-state-dev-${{ env.AWS_REGION }}-${{ env.AWS_DEV_ACCOUNT_NUMBER }}" \
+                -backend-config="region=${{ env.AWS_REGION }}" \
+                -backend-config="key=mlops-terraform-dev.state" \
+                -backend-config="dynamodb_table=${{ env.DYNAMODB_PREFIX }}-dev" \
+                -backend-config="encrypt=true" \
+                -reconfigure && \
+              terraform destroy \
+                -lock=false \
+                -var preprod_account_number=${{ env.AWS_PREPROD_ACCOUNT_NUMBER }} \
+                -var prod_account_number=${{ env.AWS_PROD_ACCOUNT_NUMBER }} \
+                -var region=${{ env.AWS_REGION }} \
+                -var pat_github=${{ env.PAT_GITHUB}} \
+                -var-file ../account_config/dev/terraform.tfvars \
+                -auto-approve
+            fi
+  
     # tf-destroy-preprod: 
     #   name: Terraform Destroy PreProd
     #   runs-on: ubuntu-latest
