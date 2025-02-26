@@ -1,27 +1,66 @@
-# S3
-# Creates SageMaker bucket with versioning enabled
-module "sagemaker_bucket" {
-  source                  = "../modules/s3"
-  s3_bucket_name          = "sagemaker-${local.aws_region}-${local.account_id}"
-  s3_bucket_force_destroy = "false"
-  versioning              = "Enabled"
-  s3_bucket_policy        = data.aws_iam_policy_document.sagemaker_bucket_policy.json
+terraform {
+  backend "s3" {
+    bucket         = "terraform-state-${local.aws_region}-${local.account_id}"
+    key            = "mlops-terraform-dev.state"
+    region         = "${local.aws_region}"
+    dynamodb_table = "terraform-state-locks"
+    encrypt        = true
+  }
 }
 
-
-# Creates data science bucket with versioning enabled
-module "datascience_bucket" {
-  source                  = "../modules/s3"
-  s3_bucket_name          = "${var.s3_bucket_prefix}-ds-${local.aws_region}-${local.account_id}"
-  s3_bucket_force_destroy = "false"
-  versioning              = "Enabled"
-  s3_bucket_policy        = data.aws_iam_policy_document.datascience_bucket_policy.json
+# S3 Buckets
+# Create the buckets directly with AWS provider resources
+resource "aws_s3_bucket" "sagemaker_bucket" {
+  bucket = local.expected_sagemaker_bucket_name
+  force_destroy = false
+  
+  # This will prevent errors if the bucket already exists
+  # lifecycle {
+  #   ignore_changes = all
+  #   prevent_destroy = true
+  # }
 }
+
+resource "aws_s3_bucket_versioning" "sagemaker_bucket_versioning" {
+  bucket = aws_s3_bucket.sagemaker_bucket.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_policy" "sagemaker_bucket_policy" {
+  bucket = aws_s3_bucket.sagemaker_bucket.id
+  policy = data.aws_iam_policy_document.sagemaker_bucket_policy.json
+}
+
+resource "aws_s3_bucket" "datascience_bucket" {
+  bucket = local.expected_datascience_bucket_name
+  force_destroy = false
+  
+  # This will prevent errors if the bucket already exists
+  # lifecycle {
+  #   ignore_changes = all
+  #   prevent_destroy = true
+  # }
+}
+
+resource "aws_s3_bucket_versioning" "datascience_bucket_versioning" {
+  bucket = aws_s3_bucket.datascience_bucket.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_policy" "datascience_bucket_policy" {
+  bucket = aws_s3_bucket.datascience_bucket.id
+  policy = data.aws_iam_policy_document.datascience_bucket_policy.json
+}
+
 
 # Creates service catalog bucket with versioning enabled
 module "service_catalog_bucket" {
   source                  = "../modules/s3"
-  s3_bucket_name          = "service-catalog-${local.aws_region}-${local.account_id}"
+  s3_bucket_name          = local.expected_service_catalog_bucket_name
   s3_bucket_force_destroy = "false"
   versioning              = "Enabled"
   s3_bucket_policy        = data.aws_iam_policy_document.service_catalog_bucket_policy.json

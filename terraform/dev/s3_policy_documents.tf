@@ -1,9 +1,9 @@
-# Creates policy document for sagemaker bucket
+# ✅ Creates policy document for SageMaker bucket
 data "aws_iam_policy_document" "sagemaker_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-    resources = ["arn:aws:s3:::${module.sagemaker_bucket.bucket_id}/*"]
+    resources = ["arn:aws:s3:::${local.expected_sagemaker_bucket_name}/*"]
     actions   = ["s3:*"]
 
     condition {
@@ -19,14 +19,14 @@ data "aws_iam_policy_document" "sagemaker_bucket_policy" {
   }
 }
 
-
-# Creates policy document for datascience bucket
+# ✅ Creates policy document for Data Science bucket
 data "aws_iam_policy_document" "datascience_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-    resources = ["arn:aws:s3:::${module.datascience_bucket.bucket_id}/*"]
+    resources = ["arn:aws:s3:::${local.expected_datascience_bucket_name}/*"]
     actions   = ["s3:*"]
+
     condition {
       test     = "Bool"
       variable = "aws:SecureTransport"
@@ -39,14 +39,13 @@ data "aws_iam_policy_document" "datascience_bucket_policy" {
     }
   }
 }
-
 
 # Creates policy document for service catalog bucket
 data "aws_iam_policy_document" "service_catalog_bucket_policy" {
   statement {
     sid       = "DenyUnEncryptedObjectTransfers"
     effect    = "Deny"
-    resources = ["arn:aws:s3:::${module.service_catalog_bucket.bucket_id}/*"]
+    resources = ["arn:aws:s3:::${local.expected_service_catalog_bucket_name}/*"]
     actions   = ["s3:*"]
     condition {
       test     = "Bool"
@@ -61,10 +60,8 @@ data "aws_iam_policy_document" "service_catalog_bucket_policy" {
   }
 }
 
-
 # Creates policy document for kms key
 data "aws_iam_policy_document" "sagemaker_key_policy" {
-
   statement {
     sid       = "Allow access for Key Administrators"
     effect    = "Allow"

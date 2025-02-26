@@ -31,3 +31,28 @@ variable "github_organization" {
   description = "Name Github Organization"
   type        = string
 }
+
+
+variable "use_existing_sagemaker_bucket" {
+  description = "Whether to use an existing SageMaker bucket"
+  type        = bool
+  default     = false
+}
+
+variable "existing_sagemaker_bucket_name" {
+  description = "Name of the existing SageMaker bucket to use"
+  type        = string
+  default     = ""
+}
+
+variable "use_existing_datascience_bucket" {
+  description = "Whether to use an existing Data Science bucket"
+  type        = bool
+  default     = false
+}
+
+variable "existing_datascience_bucket_name" {
+  description = "Name of the existing Data Science bucket to use"
+  type        = string
+  default     = ""
+}

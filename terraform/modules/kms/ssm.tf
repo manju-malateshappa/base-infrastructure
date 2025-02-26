@@ -3,5 +3,4 @@ resource "aws_ssm_parameter" "kms_key" {
   name      = "/kms/key_arn"
   type      = "String"
   value     = aws_kms_key.key.arn
-  overwrite = true
 }
