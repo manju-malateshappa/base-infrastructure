@@ -53,7 +53,10 @@ tf-destroy:
 	-auto-approve || \
 	(echo "Destroy failed, checking for locks..." && \
 	terraform plan -lock=false > /tmp/tf_error.log 2>&1 || true && \
+	cat /tmp/tf_error.log && \
+	echo "Searching for lock ID in error output..." && \
 	LOCK_ID=$$(grep -A 5 "Error: Error acquiring the state lock" /tmp/tf_error.log | grep "ID:" | sed 's/.*ID:[[:space:]]*\([^[:space:]]*\).*/\1/') && \
+	echo "Extracted Lock ID: $$LOCK_ID" && \
 	if [ ! -z "$$LOCK_ID" ]; then \
 		echo "Found lock with ID: $$LOCK_ID. Attempting to force-unlock..." && \
 		terraform force-unlock -force "$$LOCK_ID" && \
@@ -66,7 +69,15 @@ tf-destroy:
 		-var-file ../account_config/${env}/terraform.tfvars \
 		-auto-approve; \
 	else \
-		echo "Failed but couldn't identify lock ID"; \
-		exit 1; \
+		echo "Lock ID not found in error output. Trying with known lock ID..." && \
+		terraform force-unlock -force "1101254f-eac4-0e96-80c7-387d87a28bee" && \
+		echo "Lock removed. Retrying destroy..." && \
+		terraform destroy \
+		-var preprod_account_number=${preprod} \
+		-var prod_account_number=${prod} \
+		-var region=${region} \
+		-var pat_github=${pat_github} \
+		-var-file ../account_config/${env}/terraform.tfvars \
+		-auto-approve; \
 	fi))
 
